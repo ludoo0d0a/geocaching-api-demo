@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Debug with node",
+            "program": "${workspaceRoot}/src/app.js",
+            "cwd": "${workspaceRoot}",
+            "preLaunchTask": "build",
+            "runtimeArgs": [
+                "--experimental-modules"
+            ],
+            "outFiles": [
+                "${workspaceRoot}/dist/**.js"
+            ]
+        }, {
+            "type": "node",
+            "request": "launch",
+            "name": "Debug with babel",
+            "program": "${workspaceFolder}/src/app.js",
+            "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/babel-node",
+            "runtimeArgs": [
+                "--nolazy"
+            ],
+            "sourceMaps": true,
+            "env": {
+                "BABEL_ENV": "debug"
+            }
+        }
+    ]
+}
