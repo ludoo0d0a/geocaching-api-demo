@@ -1,5 +1,6 @@
 {
-   "name": "geocaching-api-demo",
+  "name": "geocaching-api-demo",
+  "description": "Demo for Node.js client for Geocaching API",
   "version": "2.1.0",
   "main": "./dist/index",
   "scripts": {
