@@ -9,20 +9,12 @@ import expressLayouts from 'express-ejs-layouts';
 
 import config from './config/config-api';
 
-// 
-// "geocaching-api": "^2.1.0",
 import {Strategy as RememberMeStrategy} from 'passport-remember-me'
-// const RememberMeStrategy = require('passport-remember-me');
 import GeocachingStrategy from 'passport-geocaching'
-import GeocachingApi from './lib/src/geocaching-api';
-// import GeocachingApi from 'geocaching-api';
 
-// Can debug with npm link
-// import GeocachingApi from 'geocaching-api/src/geocaching-api';
-// import GeocachingApi from 'geocaching-api/dist/geocaching-api';
-
-// or get sources fron original repository 
-//import GeocachingStrategy from '../../passport-geocaching/lib/index'
+// npm link issue with Babel7, so copy src in lib
+//import GeocachingApi from './lib/src/geocaching-api';
+import GeocachingApi from 'geocaching-api';
 
 const port = process.env.PORT || 3000;
 const host = process.env.IP || 'localhost';
