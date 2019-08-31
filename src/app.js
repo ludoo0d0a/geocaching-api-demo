@@ -9,23 +9,29 @@ import expressLayouts from 'express-ejs-layouts';
 
 import config from './config/config-api';
 
+// 
+// "geocaching-api": "^2.1.0",
+import {Strategy as RememberMeStrategy} from 'passport-remember-me'
+// const RememberMeStrategy = require('passport-remember-me');
 import GeocachingStrategy from 'passport-geocaching'
+import GeocachingApi from './lib/src/geocaching-api';
+// import GeocachingApi from 'geocaching-api';
+
 // Can debug with npm link
+// import GeocachingApi from 'geocaching-api/src/geocaching-api';
+// import GeocachingApi from 'geocaching-api/dist/geocaching-api';
 
 // or get sources fron original repository 
 //import GeocachingStrategy from '../../passport-geocaching/lib/index'
 
-var port = process.env.PORT || 3000;
-var GEOCACHING_APP_ID = "--insert-geocaching-app-id-here--"
-var GEOCACHING_APP_SECRET = "--insert-geocaching-app-secret-here--";
+const port = process.env.PORT || 3000;
+const host = process.env.IP || 'localhost';
+const cookie_name =  'remember_me';
 
-var callbackURL = 'http://localhost:'+port+'/auth/callback';
+const GEOCACHING_APP_ID = config.clientID || "--insert-geocaching-app-id-here--"
+const GEOCACHING_APP_SECRET = config.clientSecret || "--insert-geocaching-app-secret-here--";
+const callbackURL = config.callbackURL || 'http://localhost:'+port+'/auth/callback';
 
-if (config){
-  GEOCACHING_APP_ID = config.clientID;
-  GEOCACHING_APP_SECRET = config.clientSecret ;
-  callbackURL = config.callbackURL; 
-}
 // Passport session setup.
 //   To support persistent login sessions, Passport needs to be able to
 //   serialize users into and deserialize users out of the session.  Typically,
@@ -41,6 +47,13 @@ passport.deserializeUser(function(obj, done) {
   done(null, obj);
 });
 
+const api = new GeocachingApi(config);
+
+// Use the GeocachingStrategy within GeocachingApi for Passsport.
+//TODO : can be better
+api.strategy = new GeocachingStrategy(config, api._verify.bind(api));
+
+passport.use(api.strategy);
 
 // Use the GeocachingStrategy within Passport.
 //   Strategies in Passport require a `verify` function, which accept
@@ -49,18 +62,14 @@ passport.deserializeUser(function(obj, done) {
 passport.use(new GeocachingStrategy({
     clientID: GEOCACHING_APP_ID,
     clientSecret: GEOCACHING_APP_SECRET,
-    // clientID: GEOCACHING_APP_ID,
-    // consumerSecret: GEOCACHING_APP_SECRET,
-
     //You can skip profile request access
     //skipUserProfile: true,
-    
     callbackURL: callbackURL
   },
   function(accessToken, refreshToken, profile, done) {
-    
     //returns accesstoken to be displayed
     profile.token = accessToken;
+    api.setAuth(accessToken);
     
     // asynchronous verification, for effect...
     process.nextTick(function () {
@@ -71,6 +80,36 @@ passport.use(new GeocachingStrategy({
       // and return that user instead.
       return done(null, profile);
     });
+  }
+));
+
+// Remember Me cookie strategy
+//   This strategy consumes a remember me token, supplying the user the
+//   token was originally issued to.  The token is single-use, so a new
+//   token is then issued to replace it.
+passport.use(new RememberMeStrategy(
+  function(userCookie, done) {
+    if (userCookie){
+      api.setAuth(userCookie.token);
+      // Reload user from cookie
+      return api.getYourUserProfile({}, function(err, user){
+        if (!err && user){
+          user.storage = 'I read token from cookie and load user from API'
+        }
+        done(null, user);
+      })
+    }else{
+      //TODO: what to do ?
+      return done(null, {});
+    }
+  },
+  function(user, done) {
+    // Save some props of the user in the cookie
+    const userToSaveInCookie = {
+      ...user,
+      storage: 'I will be saved in a cookie'
+    } 
+    return done(null, userToSaveInCookie);
   }
 ));
 
@@ -86,7 +125,7 @@ app.use(bodyParser.json());
 
 app.use(methodOverride());
 app.use(session({ 
-  secret: 'keyboard cat',
+  secret: 'FTFGeocache:)',
   resave: false,
   saveUninitialized: true
 }));
@@ -95,29 +134,36 @@ app.use(session({
 // persistent login sessions (recommended).
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(passport.authenticate('remember-me'));
 app.use(express.static(__dirname + '/public'));
 
 app.get('/', function(req, res){
-//     var token = api.oauth_token || '{Undefined}';
-//     res.render('index', { user: req.user, token: token });
-  res.render('index', { user: req.user });
+    var token = api.oauth_token || '{Undefined}';
+    res.render('index', { user: req.user, token: token });
 });
 
 app.get('/account', ensureAuthenticated, function(req, res){
-//     res.render('account', { user: req.user, api: api, oauth: api._tokens || {}, token: req.token || (req.user && req.user.token) || '?' });
-  res.render('account', { user: req.user });
+  res.render('account', { 
+    user: req.user, 
+    api: api, 
+    oauth: api._tokens || {}, 
+    token: req.token || (req.user && req.user.token) || '?' 
+  });
+  // res.render('account', { user: req.user });
 });
 
 app.get('/test', ensureAuthenticated, function(req, res) {
     if (api) {
         api.getYourUserProfile({}, function(err, user) {
-            var data = '',
+          // api.getYourUserProfile().then((err, user) => {
+            let data = '',
                 error = '',
                 token = api.oauth_token || '{Undefined}';
             if (err) {
                 error = JSON.stringify(err);
                 user = { homeCoordinates: {}}
             } else {
+                user.storage = 'I come from API'
                 data = JSON.stringify({ user });
             }
             res.render('test', { user: serializeTojson(user) , token: token, data: data, error: error });
@@ -139,6 +185,9 @@ app.get('/auth/geocaching',
   function(req, res){
     // The request will be redirected to Geocaching for authentication, so this
     // function will not be called.
+    if (req.params.rememberme){
+      // TODO: Pass remember-me as option
+    }
   });
 
 // GET /auth/callback
@@ -153,16 +202,24 @@ app.get('/auth/geocaching',
 app.get('/auth/callback', 
   passport.authenticate('geocaching', { failureRedirect: '/login' }),
   function(req, res) {
+    // save a subset of the user profile in cookie (needs to be reloaded in fact)
+    const user = { 
+      username: req.user.username,
+      id: req.user.id,
+      token: req.user.token,
+    }
+    res.cookie(cookie_name, user, { path: '/', httpOnly: true, maxAge: 604800000 });
     res.redirect('/');
   });
 
 app.get('/logout', function(req, res){
+  res.clearCookie(cookie_name);
   req.logout();
   res.redirect('/');
 });
 
 app.listen(port, function() {
-    console.log('Example app for geocaching-api is listening on http://%s:%d', ip, port);
+    console.log('Example app for geocaching-api is listening on http://%s:%d', host, port);
 });
 
 

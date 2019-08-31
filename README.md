@@ -13,10 +13,15 @@ Demo for [passport-geocaching](https://github.com/ludoo0d0a/passport-geocaching)
 
 ## Debug
 
+    To symlink inner component from project (issue with Babel 7) :
     $ cd ../passport-geocaching
     $ npm link 
     $ cd ../passport-geocaching-demo
     $ npm link passport-geocaching
+
+    To sync reosurces between src and dist :
+    
+    $ npm run sync 
 
 ## Credits
 

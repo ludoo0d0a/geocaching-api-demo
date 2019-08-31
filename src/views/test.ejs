@@ -1,4 +1,5 @@
 
+<p>Simple API call on api.getYourUserProfile() or new UsersApi().usersGetUser('me') xxxrr</p>
 <div class="error"><%= error %></div>
 <hr/>
 
@@ -10,12 +11,14 @@
 <p>Favorite points : <%= user.favoritePoints %></p>
 <p>membershipLevelId: <%= user.membershipLevelId %></p>
 <p>homeCoordinates: <%= user.homeCoordinates.latitude %>,<%= user.homeCoordinates.longitude %></p>
+
+<hr>
+<p>storage: <%= user.storage ? user.storage : '-' %></p>
+<code>AccessToken: <%= token %></code>
+<hr>
+<code><%= data %></code>
+
+<hr/>
 <%- user.profileText %>
-
-<hr>
-<p>AccessToken: <%= token %></p>
-<hr>
-<pre><%= data %></pre>
-
 
     
