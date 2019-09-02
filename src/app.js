@@ -20,9 +20,12 @@ const port = process.env.PORT || 3000;
 const host = process.env.IP || 'localhost';
 const cookie_name =  'remember_me';
 
-const GEOCACHING_APP_ID = config.clientID || "--insert-geocaching-app-id-here--"
-const GEOCACHING_APP_SECRET = config.clientSecret || "--insert-geocaching-app-secret-here--";
-const callbackURL = config.callbackURL || 'http://localhost:'+port+'/auth/callback';
+// TODO : To remove from call
+var apiVersion = '1'; 
+
+// const GEOCACHING_APP_ID = config.clientID || "--insert-geocaching-app-id-here--"
+// const GEOCACHING_APP_SECRET = config.clientSecret || "--insert-geocaching-app-secret-here--";
+// const callbackURL = config.callbackURL || 'http://localhost:'+port+'/auth/callback';
 
 // Passport session setup.
 //   To support persistent login sessions, Passport needs to be able to
@@ -51,29 +54,30 @@ passport.use(api.strategy);
 //   Strategies in Passport require a `verify` function, which accept
 //   credentials (in this case, an accessToken, refreshToken, and Geocaching
 //   profile), and invoke a callback with a user object.
-passport.use(new GeocachingStrategy({
-    clientID: GEOCACHING_APP_ID,
-    clientSecret: GEOCACHING_APP_SECRET,
-    //You can skip profile request access
-    //skipUserProfile: true,
-    callbackURL: callbackURL
-  },
-  function(accessToken, refreshToken, profile, done) {
-    //returns accesstoken to be displayed
-    profile.token = accessToken;
-    api.setAuth(accessToken);
+// passport.use(
+//   new GeocachingStrategy({
+//     clientID: GEOCACHING_APP_ID,
+//     clientSecret: GEOCACHING_APP_SECRET,
+//     //You can skip profile request access
+//     //skipUserProfile: true,
+//     callbackURL: callbackURL
+//   }  ,
+//   function(accessToken, refreshToken, profile, done) {
+//     //returns accesstoken to be displayed
+//     profile.token = accessToken;
+//     api.setAuth(accessToken);
     
-    // asynchronous verification, for effect...
-    process.nextTick(function () {
+//     // asynchronous verification, for effect...
+//     process.nextTick(function () {
       
-      // To keep the example simple, the user's Geocaching profile is returned to
-      // represent the logged-in user.  In a typical application, you would want
-      // to associate the Geocaching account with a user record in your database,
-      // and return that user instead.
-      return done(null, profile);
-    });
-  }
-));
+//       // To keep the example simple, the user's Geocaching profile is returned to
+//       // represent the logged-in user.  In a typical application, you would want
+//       // to associate the Geocaching account with a user record in your database,
+//       // and return that user instead.
+//       return done(null, profile);
+//     });
+//   }
+// ));
 
 // Remember Me cookie strategy
 //   This strategy consumes a remember me token, supplying the user the
@@ -81,7 +85,7 @@ passport.use(new GeocachingStrategy({
 //   token is then issued to replace it.
 passport.use(new RememberMeStrategy(
   function(userCookie, done) {
-    if (userCookie){
+    if (userCookie && userCookie.token){
       api.setAuth(userCookie.token);
       // Reload user from cookie
       return api.getYourUserProfile({}, function(err, user){
@@ -91,8 +95,8 @@ passport.use(new RememberMeStrategy(
         done(null, user);
       })
     }else{
-      //TODO: what to do ?
-      return done(null, {});
+      // cookie will be cleared
+      return done(null, false);
     }
   },
   function(user, done) {
@@ -104,6 +108,19 @@ passport.use(new RememberMeStrategy(
     return done(null, userToSaveInCookie);
   }
 ));
+
+if (config.token){
+  // Token is already know at startup
+  api.setAuth(config.token);
+  api.getYourUserProfile({}, function(err, user){
+    if (!err && user){
+      user.storage = 'Token was saved in DB/config on server, and user is retrieved at startup from API'
+      // TODO : Load token from server don' work
+      // req.login(user);
+      // api.strategy._verify(user);
+    }
+  })
+}
 
 var app = express();
 
@@ -163,6 +180,17 @@ app.get('/test', ensureAuthenticated, function(req, res) {
     }
 });
 
+app.get('/queries', ensureAuthenticated, function(req, res) {
+    if (api) {
+        const referenceCode = 'GCK25B';
+        api.GeocachesApi().geocachesGetGeocache(referenceCode, apiVersion, {
+          fields: 'referenceCode,name,difficulty,terrain,favoritePoints,trackableCount,placedDate,geocacheType,geocacheSize,status,location,lastVisitedDate,ownerCode,ownerAlias,shortDescription,longDescription,findCount'
+        }, function(err, geocache) {
+            res.render('queries', { user: req.user, geocache: geocache || {}, error: err || '' });
+        });
+    }
+});
+
 app.get('/login', function(req, res){
   res.render('login', { user: req.user });
 });
@@ -198,7 +226,7 @@ app.get('/auth/callback',
     const user = { 
       username: req.user.username,
       id: req.user.id,
-      token: req.user.token,
+      token: api.oauth_token // req.user.token,
     }
     res.cookie(cookie_name, user, { path: '/', httpOnly: true, maxAge: 604800000 });
     res.redirect('/');

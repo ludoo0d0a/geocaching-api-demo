@@ -1,0 +1,27 @@
+
+<p>API call to fetch some data</p>
+<div class="error"><%= error %></div>
+<hr/>
+
+<h2>api.GeocachesApi().geocachesGetGeocache()</h2>
+<p>referenceCode: <%= geocache.referenceCode %></p>
+<p>difficulty: <%= geocache.difficulty %></p>
+<p>terrain: <%= geocache.terrain %></p>
+<p>status: <%= geocache.status %></p>
+<p>geocacheType: <%= geocache.geocacheType.name %> : <%= geocache.geocacheType.id %></p>
+<p>geocacheSize: <%= geocache.geocacheSize.name %> : <%= geocache.geocacheSize.id %></p>
+<p>ownerCode: <%= geocache.ownerCode %></p>
+<p>ownerAlias: <%= geocache.ownerAlias %></p>
+<p>findCount: <%= geocache.findCount %></p>
+<p>favoritePoints: <%= geocache.favoritePoints %></p>
+<p>trackableCount: <%= geocache.trackableCount %></p>
+<p>placedDate: <%= geocache.placedDate %></p>
+<p>lastVisitedDate: <%= geocache.lastVisitedDate %></p>
+<p>shortDescription: <%- geocache.shortDescription %></p>
+<p>longDescription: <%- geocache.longDescription %></p>
+<p>location: <%= geocache.location ? geocache.location.latitude : ''%>,
+<%= geocache.location ? geocache.location.longitude : ''%></p>
+
+<code><%= JSON.stringify(geocache) %></code>
+
+    
