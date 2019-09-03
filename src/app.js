@@ -15,6 +15,7 @@ import GeocachingStrategy from 'passport-geocaching'
 // npm link issue with Babel7, so copy src in lib
 //import GeocachingApi from './lib/src/geocaching-api';
 import GeocachingApi from 'geocaching-api';
+import { Geocache } from 'geocaching-api/dist/Api-v10';
 
 const port = process.env.PORT || 3000;
 const host = process.env.IP || 'localhost';
@@ -22,6 +23,11 @@ const cookie_name =  'remember_me';
 
 // TODO : To remove from call
 var apiVersion = '1'; 
+
+process.on('unhandledRejection', (reason, p) => {
+  console.log('Unhandled Rejection at: Promise', p, 'reason:', reason);
+  // application specific logging, throwing an error, or other logic here
+});
 
 // const GEOCACHING_APP_ID = config.clientID || "--insert-geocaching-app-id-here--"
 // const GEOCACHING_APP_SECRET = config.clientSecret || "--insert-geocaching-app-secret-here--";
@@ -86,13 +92,15 @@ passport.use(api.strategy);
 passport.use(new RememberMeStrategy(
   function(userCookie, done) {
     if (userCookie && userCookie.token){
+      console.log('Load user me (2)')
       api.setAuth(userCookie.token);
       // Reload user from cookie
-      return api.getYourUserProfile({}, function(err, user){
-        if (!err && user){
-          user.storage = 'I read token from cookie and load user from API'
-        }
+      return api.getYourUserProfile().then(user => {
+        user.storage = 'I read token from cookie and load user from API'
         done(null, user);
+      }).catch(err =>{
+        // cookie will be cleared
+        done(null, false);
       })
     }else{
       // cookie will be cleared
@@ -109,18 +117,19 @@ passport.use(new RememberMeStrategy(
   }
 ));
 
-if (config.token){
-  // Token is already know at startup
-  api.setAuth(config.token);
-  api.getYourUserProfile({}, function(err, user){
-    if (!err && user){
-      user.storage = 'Token was saved in DB/config on server, and user is retrieved at startup from API'
-      // TODO : Load token from server don' work
-      // req.login(user);
-      // api.strategy._verify(user);
-    }
-  })
-}
+// if (config.token){
+//   // Token is already know at startup
+//   api.setAuth(config.token);
+//   console.log('Load user me (1)')
+//   api.getYourUserProfile().then(user => {
+//       user.storage = 'Token was saved in DB/config on server, and user is retrieved at startup from API'
+//       // TODO : Load token from server don' work
+//       // req.login(user);
+//       // api.strategy._verify(user);
+//   }).catch(err => {
+//     console.error('Error', err);
+//   })
+// }
 
 var app = express();
 
@@ -163,19 +172,18 @@ app.get('/account', ensureAuthenticated, function(req, res){
 
 app.get('/test', ensureAuthenticated, function(req, res) {
     if (api) {
-        api.getYourUserProfile({}, function(err, user) {
-          // api.getYourUserProfile().then((err, user) => {
-            let data = '',
-                error = '',
-                token = api.oauth_token || '{Undefined}';
-            if (err) {
-                error = JSON.stringify(err);
-                user = { homeCoordinates: {}}
-            } else {
-                user.storage = 'I come from API'
-                data = JSON.stringify({ user });
-            }
+        console.log('Load user me (3)')
+        let data = '',
+            error = '',
+            token = api.oauth_token || '{Undefined}';
+        api.getYourUserProfile().then(user => {
+            user.storage = 'I come from API'
+            data = JSON.stringify({ user });
             res.render('test', { user: serializeTojson(user) , token: token, data: data, error: error });
+        }).catch(err =>{
+          error = JSON.stringify(err);
+          user = { homeCoordinates: {}}
+          res.render('test', { user: serializeTojson(user) , token: token, data: data, error: err });
         });
     }
 });
@@ -183,10 +191,15 @@ app.get('/test', ensureAuthenticated, function(req, res) {
 app.get('/queries', ensureAuthenticated, function(req, res) {
     if (api) {
         const referenceCode = 'GCK25B';
-        api.GeocachesApi().geocachesGetGeocache(referenceCode, apiVersion, {
-          fields: 'referenceCode,name,difficulty,terrain,favoritePoints,trackableCount,placedDate,geocacheType,geocacheSize,status,location,lastVisitedDate,ownerCode,ownerAlias,shortDescription,longDescription,findCount'
-        }, function(err, geocache) {
-            res.render('queries', { user: req.user, geocache: geocache || {}, error: err || '' });
+        const lite=false;
+        const expand=false;
+        let fields = api.getFields(new Geocache);
+        const requiredFields = 'referenceCode,name,difficulty,terrain,favoritePoints,trackableCount,placedDate,geocacheType,geocacheSize,status,location,lastVisitedDate,ownerCode,ownerAlias,shortDescription,longDescription,findCount';
+        api.GeocachesApi().geocachesGetGeocache(referenceCode, api.apiVersion, { lite, expand, fields }).then(geocache => {
+            res.render('queries', { user: req.user, geocache: geocache || {}, error: '' });
+        }).catch(err => {
+          console.error('Cannot get queries', err);
+          res.render('queries', { user: req.user, geocache: {}, error: err || '' });
         });
     }
 });

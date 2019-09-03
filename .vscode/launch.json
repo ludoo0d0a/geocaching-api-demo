@@ -9,7 +9,8 @@
             "cwd": "${workspaceRoot}",
             "preLaunchTask": "build",
             "runtimeArgs": [
-                "--experimental-modules"
+                "--experimental-modules",
+                "--trace-warnings"
             ],
             "outFiles": [
                 "${workspaceRoot}/dist/**.js"
