@@ -9,7 +9,7 @@
     "prepare": "npm run build",
     "dev": "babel-node src/app.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "sync": "cpx 'src/views/*.ejs' dist/views --watch",
+    "sync": "cpx 'src/views/**/*.ejs' dist/views --watch",
     "build": "babel src -d dist --source-maps"
   },
   "dependencies": {

@@ -160,6 +160,11 @@ app.get('/', function(req, res){
     res.render('index', { user: req.user, token: token });
 });
 
+app.get('/login', function(req, res){
+  res.render('login', { user: req.user });
+});
+
+
 app.get('/account', ensureAuthenticated, function(req, res){
   res.render('account', { 
     user: req.user, 
@@ -170,7 +175,7 @@ app.get('/account', ensureAuthenticated, function(req, res){
   // res.render('account', { user: req.user });
 });
 
-app.get('/test', ensureAuthenticated, function(req, res) {
+app.get('/test/user', ensureAuthenticated, function(req, res) {
     if (api) {
         console.log('Load user me (3)')
         let data = '',
@@ -179,16 +184,16 @@ app.get('/test', ensureAuthenticated, function(req, res) {
         api.getYourUserProfile().then(user => {
             user.storage = 'I come from API'
             data = JSON.stringify({ user });
-            res.render('test', { user: serializeTojson(user) , token: token, data: data, error: error });
+            res.render('test/user', { user: serializeTojson(user) , token: token, data: data, error: error });
         }).catch(err =>{
           error = JSON.stringify(err);
           user = { homeCoordinates: {}}
-          res.render('test', { user: serializeTojson(user) , token: token, data: data, error: err });
+          res.render('test/user', { user: serializeTojson(user) , token: token, data: data, error: err });
         });
     }
 });
 
-app.get('/queries', ensureAuthenticated, function(req, res) {
+app.get('/test/geocache', ensureAuthenticated, function(req, res) {
     if (api) {
         const referenceCode = 'GCK25B';
         const lite=false;
@@ -196,17 +201,37 @@ app.get('/queries', ensureAuthenticated, function(req, res) {
         let fields = api.getFields(new Geocache);
         const requiredFields = 'referenceCode,name,difficulty,terrain,favoritePoints,trackableCount,placedDate,geocacheType,geocacheSize,status,location,lastVisitedDate,ownerCode,ownerAlias,shortDescription,longDescription,findCount';
         api.GeocachesApi().geocachesGetGeocache(referenceCode, api.apiVersion, { lite, expand, fields }).then(geocache => {
-            res.render('queries', { user: req.user, geocache: geocache || {}, error: '' });
+            res.render('test/geocache', { user: req.user, geocache: geocache || {}, error: '' });
         }).catch(err => {
-          console.error('Cannot get queries', err);
-          res.render('queries', { user: req.user, geocache: {}, error: err || '' });
+          console.error('Cannot get geocache', err);
+          res.render('test/geocache', { user: req.user, geocache: {}, error: err || '' });
         });
     }
 });
 
-app.get('/login', function(req, res){
-  res.render('login', { user: req.user });
+app.get('/test/geocaches', ensureAuthenticated, function(req, res) {
+    if (api) {
+        const lite=false;
+        const expand=false;
+        const skip=0;
+        const take=10;
+        const sort = 'dist+';
+        const filters = {
+          location: [48.8587,2.342869], //Paris
+          radius: '10km'
+        }; 
+        // const q = 'location:[47,122]+radius:30mi';
+        const q = api.serializeQuery(filters);
+        let fields = api.getFields(new Geocache);
+        api.GeocachesApi().geocachesSearch(q, api.apiVersion, { lite, expand, fields, skip, take, sort }).then(geocaches => {
+            res.render('test/geocaches', { user: req.user, filters, geocaches: geocaches || [], error: '' });
+        }).catch(err => {
+          console.error('Cannot get geocaches', err);
+          res.render('test/geocaches', { user: req.user, filters: '', geocaches: [], error: err || '' });
+        });
+    }
 });
+
 
 // GET /auth/geocaching
 //   Use passport.authenticate() as route middleware to authenticate the

@@ -1,0 +1,28 @@
+
+<p>API call to fetch some data</p>
+<div class="error"><%= error %></div>
+<hr/>
+
+<h2>api.GeocachesApi().geocachesSearch()</h2>
+<p>Query with : 
+<code><%- JSON.stringify(filters) %></code>
+</p>
+
+<ul>
+<% geocaches.forEach(function(geocache){ %>
+    <li>
+        <p><a href="<%= geocache.url %>"><%= geocache.referenceCode %></a>
+         , D<%= geocache.difficulty %>
+         , T<%= geocache.terrain %>
+         , <%= geocache.status %> <%= geocache.favoritePoints %> stars
+         , <%= geocache.location.state %>,<%= geocache.location.country %>,
+         , <%= geocache.geocacheType ? geocache.geocacheType.name : '' %> : <%= geocache.geocacheType ? geocache.geocacheType.id : '' %>
+         , <%= geocache.geocacheSize ? geocache.geocacheSize.name : '' %> : <%= geocache.geocacheSize ? geocache.geocacheSize.id : '' %>
+        </p>
+        <p>shortDescription: <%- geocache.shortDescription %></p>
+        <p>lastVisited @<%= geocache.lastVisitedDate %></p>
+    </li>
+<% }); %>
+</ul>
+
+    
