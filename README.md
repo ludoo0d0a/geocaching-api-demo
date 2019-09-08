@@ -1,7 +1,7 @@
 
-# passport-geocaching-demo
+# geocaching-api-demo
 
-Demo for [passport-geocaching](https://github.com/ludoo0d0a/passport-geocaching) : Geocaching authentication strategy for Passport and Node.js.
+Demo for [geocaching-api](https://github.com/ludoo0d0a/geocaching-api) : Geocaching API client for Node.js.
 
 ## Install
 
